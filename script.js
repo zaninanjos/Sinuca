@@ -200,3 +200,6 @@ window.addEventListener('resize', () => {
 });
 
 animate();
+
+
+// gemini n sabe codar ksksksk
