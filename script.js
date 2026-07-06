@@ -26,6 +26,7 @@ camera.lookAt(0, 0, 0);
 const world = new CANNON.World();
 world.gravity.set(0, -9.82, 0); // Gravidade padrão
 world.broadphase = new CANNON.NaiveBroadphase();
+world.solver.iterations = 30; // Aumenta a precisão das colisões (evita que as bolas atravessem a mesa)
 
 // Materiais Físicos (como as coisas quicam e deslizam)
 const physicsMaterial = new CANNON.Material();
@@ -42,7 +43,7 @@ const tableGroup = new THREE.Group();
 scene.add(tableGroup);
 
 function createBox(x, y, z, w, h, d, color) {
-    // Visual
+    // Visual (Three.js)
     const geometry = new THREE.BoxGeometry(w, h, d);
     const material = new THREE.MeshPhongMaterial({ color: color });
     const mesh = new THREE.Mesh(geometry, material);
@@ -50,19 +51,21 @@ function createBox(x, y, z, w, h, d, color) {
     mesh.receiveShadow = true;
     tableGroup.add(mesh);
 
-    // Física
-    const shape = new CANNON.Box(new CANNON.Vec3(w/2, h/2, d/2));
-    const body = new CANNON.Body({ mass: 0, material: physicsMaterial }); // mass 0 = estático
+    // Física (Cannon.js)
+    const shape = new CANNON.Box(new CANNON.Vec3(w / 2, h / 2, d / 2));
+    const body = new CANNON.Body({ mass: 0, material: physicsMaterial }); // mass 0 = objeto estático
     body.addShape(shape);
-    body.position.copy(mesh.position);
+    // Define a posição usando valores diretos para evitar erros de referência de vetor
+    body.position.set(mesh.position.x, mesh.position.y, mesh.position.z);
     world.addBody(body);
 }
 
 // Chão da mesa (Feltro Verde)
-createBox(0, -0.5, 0, 10, 1, 20, 0x006400); // Mesa
+createBox(0, -0.5, 0, 10, 1, 20, 0x006400); 
+
 // Bordas da mesa (Madeira)
-createBox(-5.5, 0, 0, 1, 1, 22, 0x8B4513); // Esquerda
-createBox(5.5, 0, 0, 1, 1, 22, 0x8B4513);  // Direita
+createBox(-5.5, 0, 0, 1, 1, 22, 0x8B4513);  // Esquerda
+createBox(5.5, 0, 0, 1, 1, 22, 0x8B4513);   // Direita
 createBox(0, 0, -10.5, 12, 1, 1, 0x8B4513); // Topo
 createBox(0, 0, 10.5, 12, 1, 1, 0x8B4513);  // Base
 
@@ -74,20 +77,21 @@ const balls = [];
 const ballRadius = 0.4;
 
 function createBall(x, z, color, isWhite = false) {
-    // Visual
+    // Visual (Three.js)
     const geometry = new THREE.SphereGeometry(ballRadius, 32, 32);
     const material = new THREE.MeshPhongMaterial({ color: color });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.castShadow = true;
     scene.add(mesh);
 
-    // Física
+    // Física (Cannon.js)
     const shape = new CANNON.Sphere(ballRadius);
     const body = new CANNON.Body({
-        mass: 0.17, // Massa realista de uma bola
+        mass: 0.17, // Massa padrão de uma bola de sinuca
         material: physicsMaterial,
-        position: new CANNON.Vec3(x, ballRadius, z),
-        linearDamping: 0.3, // Atrito com a mesa
+        // Nasce levemente acima do raio (+0.05) para assentar suavemente e não bugar com a mesa
+        position: new CANNON.Vec3(x, ballRadius + 0.05, z),
+        linearDamping: 0.3, // Simula o atrito do feltro desacelerando a bola
         angularDamping: 0.3
     });
     world.addBody(body);
@@ -100,7 +104,7 @@ function createBall(x, z, color, isWhite = false) {
 // Bola Branca
 const cueBall = createBall(0, 7, 0xffffff, true);
 
-// Bolas Alvo (Triângulo Básico)
+// Bolas Alvo (Formato de Triângulo Inicial)
 createBall(0, -3, 0xff0000);
 createBall(-0.45, -3.8, 0x0000ff);
 createBall(0.45, -3.8, 0xffff00);
@@ -109,7 +113,7 @@ createBall(0, -4.6, 0x000000); // Bola 8
 createBall(0.9, -4.6, 0x00ffff);
 
 // ==========================================
-// Controles de Tacada (Mouse/Toque)
+// Controles de Tacada (Mouse / Touch)
 // ==========================================
 
 let isDragging = false;
@@ -118,7 +122,7 @@ let startMouseY = 0;
 let isPlayerTurn = true;
 
 window.addEventListener('mousedown', (e) => {
-    if(!isPlayerTurn) return; // Se for vez do bot, não deixa clicar
+    if (!isPlayerTurn) return; // Bloqueia clique se for a vez do Bot
     isDragging = true;
     startMouseX = e.clientX;
     startMouseY = e.clientY;
@@ -128,19 +132,19 @@ window.addEventListener('mouseup', (e) => {
     if (!isDragging || !isPlayerTurn) return;
     isDragging = false;
     
-    // Calcula a força da tacada com base no quanto o mouse foi arrastado
+    // Calcula a força do disparo com base no arrasto do mouse
     const deltaX = (e.clientX - startMouseX) * 0.05;
     const deltaY = (e.clientY - startMouseY) * 0.05;
 
-    // Aplica um impulso na bola branca (Direção invertida para "empurrar")
+    // Aplica o impulso físico na bola branca
     cueBall.body.applyImpulse(
         new CANNON.Vec3(deltaX, 0, deltaY),
         cueBall.body.position
     );
 
-    // Passa o turno para o bot após um tempo (simulando que as bolas pararam)
+    // Transfere o turno para a inteligência artificial após 5 segundos
     isPlayerTurn = false;
-    document.getElementById('turn-indicator').innerText = "Turno: Bot pensativo...";
+    document.getElementById('turn-indicator').innerText = "Turno: Bot pensando...";
     setTimeout(botTurn, 5000); 
 });
 
@@ -149,18 +153,18 @@ window.addEventListener('mouseup', (e) => {
 // ==========================================
 
 function botTurn() {
-    document.getElementById('turn-indicator').innerText = "Turno: Bot executando tacada";
+    document.getElementById('turn-indicator').innerText = "Turno: Bot jogando";
     
-    // Bot Simples: Dá uma tacada em uma direção aleatória voltada para as bolas
+    // Calcula uma direção semi-aleatória mirando para a frente (onde as outras bolas estão)
     const randomForceX = (Math.random() - 0.5) * 5;
-    const randomForceZ = - (Math.random() * 5 + 2); // Sempre tenta bater para frente
+    const randomForceZ = - (Math.random() * 5 + 2); 
     
     cueBall.body.applyImpulse(
         new CANNON.Vec3(randomForceX, 0, randomForceZ),
         cueBall.body.position
     );
 
-    // Volta o turno para o jogador
+    // Devolve o controle para o jogador após a jogada finalizar
     setTimeout(() => {
         isPlayerTurn = true;
         document.getElementById('turn-indicator').innerText = "Turno: Jogador";
@@ -168,21 +172,21 @@ function botTurn() {
 }
 
 // ==========================================
-// Loop do Jogo (Atualização 60fps)
+// Loop do Jogo (Roda a 60 frames por segundo)
 // ==========================================
 
 function animate() {
     requestAnimationFrame(animate);
 
-    // Atualiza o motor de física
+    // Avança o relógio do motor físico
     world.step(1 / 60);
 
-    // Sincroniza os gráficos do Three.js com as posições físicas do Cannon.js
+    // Sincroniza a posição visual (Three.js) com a posição real simulada (Cannon.js)
     balls.forEach(ball => {
         ball.mesh.position.copy(ball.body.position);
         ball.mesh.quaternion.copy(ball.body.quaternion);
         
-        // Simula parada (se a velocidade for muito baixa, zera para não rolar infinitamente)
+        // Anti-deslize infinito: Se a bola estiver quase parando, força ela a parar completamente
         if (ball.body.velocity.lengthSquared() < 0.01) {
             ball.body.velocity.set(0, 0, 0);
             ball.body.angularVelocity.set(0, 0, 0);
@@ -192,14 +196,12 @@ function animate() {
     renderer.render(scene, camera);
 }
 
-// Redimensionar tela responsivamente
+// Ajuste automático caso o jogador mude o tamanho da janela do navegador
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+// Inicia o jogo
 animate();
-
-
-// gemini n sabe codar ksksksk
