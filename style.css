@@ -1,1 +1,32 @@
 
+body, html {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #111;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+canvas {
+    display: block; /* Remove barras de rolagem */
+}
+
+#ui {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    color: white;
+    pointer-events: none; /* Para não bloquear os cliques no jogo */
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+}
+
+h1 {
+    margin: 0 0 10px 0;
+    font-size: 2rem;
+    color: #ffd700;
+}
+
+p {
+    margin: 5px 0;
+    font-size: 1.2rem;
+}
