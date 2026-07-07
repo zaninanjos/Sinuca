@@ -214,4 +214,54 @@ window.addEventListener('resize', () => {
 // Inicia o jogo
 animate();
 
-//n feito com gemini, davi recodou isso
+//n feito com gemini, davi e zanin recordaram isso
+// Ajuste esses valores de acordo com o tamanho que você definiu para sua mesa
+const LARGURA_MESA = 10; 
+const COMPRIMENTO_MESA = 20; 
+const RAIO_CACAPA = 0.8; // Tamanho da boca da caçapa
+
+// As 6 posições exatas das caçapas
+const cacapas = [
+    { x: -LARGURA_MESA / 2, z: -COMPRIMENTO_MESA / 2 }, // Canto Superior Esquerdo
+    { x: 0,                 z: -COMPRIMENTO_MESA / 2 }, // Meio Superior
+    { x: LARGURA_MESA / 2,  z: -COMPRIMENTO_MESA / 2 }, // Canto Superior Direito
+    { x: -LARGURA_MESA / 2, z: COMPRIMENTO_MESA / 2 },  // Canto Inferior Esquerdo
+    { x: 0,                 z: COMPRIMENTO_MESA / 2 },  // Meio Inferior
+    { x: LARGURA_MESA / 2,  z: COMPRIMENTO_MESA / 2 }   // Canto Inferior Direito
+];
+function verificarBolasNasCacapas() {
+    // 'bolas' deve ser o array onde você guarda os objetos de cada bola
+    bolas.forEach((bola) => {
+        // Se a bola já caiu ou está inativa, ignora
+        if (!bola.ativa) return; 
+
+        cacapas.forEach((cacapa) => {
+            // Calcula a distância entre a bola e a caçapa usando Pitágoras
+            const dx = bola.mesh.position.x - cacapa.x;
+            const dz = bola.mesh.position.z - cacapa.z;
+            const distancia = Math.sqrt(dx * dx + dz * dz);
+
+            // Se a distância for menor que o raio da caçapa, ela caiu!
+            if (distancia < RAIO_CACAPA) {
+                encasaparBola(bola);
+            }
+        });
+    });
+}
+function encasaparBola(bola) {
+    bola.ativa = false;
+    
+    // 1. Remove ou esconde o modelo 3D da tela
+    scene.remove(bola.mesh); 
+    
+    // 2. Se estiver usando física (ex: Cannon.js), remova o corpo do mundo físico
+    // mundoFisico.removeBody(bola.corpoFisico); 
+
+    // 3. Regra especial para a bola branca
+    if (bola.ehBranca) {
+        console.log("Ih, a branca caiu! Penalidade.");
+        setTimeout(() => resetarBolaBranca(bola), 1000); // Reposiciona após 1 segundo
+    } else {
+        console.log("Bela tacada!");
+    }
+}
