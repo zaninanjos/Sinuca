@@ -89,11 +89,17 @@ function createBall(x, z, color, isWhite = false) {
     const body = new CANNON.Body({
         mass: 0.17, // Massa padrão de uma bola de sinuca
         material: physicsMaterial,
+        shape: shape, // CORRIGIDO: Agora a bola tem volume físico e não cai pelo chão!
         // Nasce levemente acima do raio (+0.05) para assentar suavemente e não bugar com a mesa
         position: new CANNON.Vec3(x, ballRadius + 0.05, z),
         linearDamping: 0.3, // Simula o atrito do feltro desacelerando a bola
         angularDamping: 0.3
     });
+
+    // Detecção de colisão contínua (evita que bolas rápidas atravessem as bordas)
+    body.ccdSpeedThreshold = 1;
+    body.ccdIterations = 5;
+
     world.addBody(body);
 
     const ball = { mesh, body, isWhite };
@@ -144,7 +150,8 @@ window.addEventListener('mouseup', (e) => {
 
     // Transfere o turno para a inteligência artificial após 5 segundos
     isPlayerTurn = false;
-    document.getElementById('turn-indicator').innerText = "Turno: Bot pensando...";
+    const indicator = document.getElementById('turn-indicator');
+    if (indicator) indicator.innerText = "Turno: Bot pensando...";
     setTimeout(botTurn, 5000); 
 });
 
@@ -153,7 +160,8 @@ window.addEventListener('mouseup', (e) => {
 // ==========================================
 
 function botTurn() {
-    document.getElementById('turn-indicator').innerText = "Turno: Bot jogando";
+    const indicator = document.getElementById('turn-indicator');
+    if (indicator) indicator.innerText = "Turno: Bot jogando";
     
     // Calcula uma direção semi-aleatória mirando para a frente (onde as outras bolas estão)
     const randomForceX = (Math.random() - 0.5) * 5;
@@ -167,7 +175,7 @@ function botTurn() {
     // Devolve o controle para o jogador após a jogada finalizar
     setTimeout(() => {
         isPlayerTurn = true;
-        document.getElementById('turn-indicator').innerText = "Turno: Jogador";
+        if (indicator) indicator.innerText = "Turno: Jogador";
     }, 5000);
 }
 
@@ -205,3 +213,5 @@ window.addEventListener('resize', () => {
 
 // Inicia o jogo
 animate();
+
+//n feito com gemini, davi recodou isso
